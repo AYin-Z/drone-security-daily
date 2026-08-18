@@ -1,0 +1,176 @@
+# ============================================================================
+# 无人机感知与反制技术日报 Agent —— 配置文件模板
+# 用法：复制本文件为 config.yaml 并填写（cp config.example.yaml config.yaml）
+# 所有相对路径均以本项目根目录为基准。
+# 部署后建议用管理面板（python3 -m dsdaily.dashboard）修改，或直接编辑本文件。
+# ============================================================================
+
+# ---------- 邮件 ----------
+smtp:
+  host: "smtp.qq.com"          # 163 邮箱: smtp.163.com | QQ 邮箱: smtp.qq.com | 126: smtp.126.com
+  port: 465                    # SSL 端口
+  user: ""                     # 发件邮箱账号（如 yourname@qq.com）
+  password: ""                 # SMTP 授权码（非登录密码！需在邮箱网页端开启 SMTP 服务并生成）
+  from_name: "无人机感知与反制技术日报"
+  to:
+    - "yinz7032@qq.com"        # 收件人（可多个；测试期用此地址，正式改为目标邮箱）
+  # 高校反垃圾网关可能拦截 .html 附件：默认「正文内嵌日报」+「trace.txt + trace.html」附件。
+  attach_report_html: false    # 是否把日报 html 也作为附件（先发测试信确认可达再开）
+  attach_trace_html: true      # 是否附带 trace 可视化 HTML 附件（被网关拦截时可改 false，txt 仍会附）
+  dry_run: true                # true = 不真正发送，生成 .eml 到 data/emails/ 供人工检查；false = 真实发送
+
+# ---------- LLM（OpenAI 兼容 API，如 DeepSeek / 硅基流动等）----------
+llm:
+  base_url: "https://api.deepseek.com/v1"   # OpenAI 兼容端点
+  api_key: ""                  # 必填。未填时自动进入 mock 模式（规则引擎，仅用于联调测试）
+  model: "deepseek-chat"
+  temperature: 0.3
+  timeout: 120
+
+# ---------- 检索 ----------
+search:
+  # 时间窗：优先收录执行当天发布；当日不足 min_articles 篇时，回溯 lookback_hours 小时并标注实际发布日期
+  window_hours: 24
+  min_articles: 6
+  lookback_hours: 48
+  max_candidates: 120          # 进入 LLM 筛选的最大候选数（超出按发布时间截取）
+  # 关键词组合（LLM 会结合当天日期生成当日检索变体；面板可自定义）
+  keywords:
+    - "无人机反制"
+    - "无人机探测"
+    - "反无人机"
+    - "无人机防御"
+    - "低空安防"
+    - "低空安全"
+    - "无人机干扰"
+    - "无人机管制"
+    - "无人机侦测"
+    - "频谱探测"
+    - "雷达探测"
+    - "光电跟踪"
+    - "无线电反制"
+    - "诱骗干扰"
+    - "激光反制"
+    - "网捕无人机"
+    - "蜂群反制"
+    - "无人机黑飞"
+    - "低空空域管理"
+    - "无人机法规"
+  # Tavily 搜索 API（可选：填 key 即启用，免费额度 1000 次/月；https://tavily.com）
+  tavily_api_key: ""
+  tavily_max_results: 10
+  # CSDN 技术文章搜索（免登录 JSON API，技术社区源；默认开）
+  csdn:
+    enabled: true
+    keywords_top: 3            # 取关键词清单前 N 个做 CSDN 检索
+  # 博查 Bocha 中文 AI 搜索（可选，付费 API：https://open.bochaai.com，约 ¥36/千次；
+  # freshness=oneDay 仅返回当天内容，适合日报；注册送免费额度以官方为准）
+  bocha:
+    enabled: false
+    api_key: ""                # open.bochaai.com 的 API key
+    keywords_top: 3
+  # 百度/360 搜索页（可选，默认关：反爬波动大，开启需接受偶发验证码降级；
+  # 开启后结果中的 mp.weixin.qq.com 链接会被自动提取为公众号文章）
+  baidu:
+    enabled: false
+    keywords_top: 3
+  qihu360:
+    enabled: false
+    keywords_top: 3
+  # 新闻搜索（免费 RSS 接口，覆盖新闻媒体与政务资讯转载，增强国内源）
+  # google 为真实 RSS（国内网络可达时使用）；若部署地不可达请设 enabled: false
+  news_rss_search:
+    enabled: true
+    engines: ["google"]        # 可选: ["google"]（bing 的 format=rss 已失效勿用）
+    keywords_top: 6            # 取关键词清单前 N 个做新闻检索
+  # RSS 数据源（全部经实测可用；面板可增删，格式: {name, url}）
+  # 中文科技媒体：36氪/爱范儿/IT之家/少数派/量子位/极客公园/雷锋网 + 钛媒体
+  # 国际反无人机垂直：DroneDJ/DroneXL/dronelife(反无人机分类,需 googlebot UA)/MyDefence/AeroVironment/
+  # C4ISRNET/UK Defence Journal/The Aviationist/Defence Industry Europe/Army&AF Times/arXiv(eess.SP) +
+  # sUAS News/Unmanned Airspace/The Drone Girl/Defense News/DroneII/The War Zone/AeroTime
+  rss_feeds:
+    - {name: "钛媒体",            url: "https://www.tmtpost.com/feed/"}
+    - {name: "36氪",              url: "https://www.36kr.com/feed"}
+    - {name: "爱范儿",            url: "https://www.ifanr.com/feed"}
+    - {name: "IT之家",            url: "https://www.ithome.com/rss/"}
+    - {name: "少数派",            url: "https://sspai.com/feed"}
+    - {name: "量子位",            url: "https://www.qbitai.com/feed"}
+    - {name: "极客公园",          url: "https://www.geekpark.net/rss"}
+    - {name: "雷锋网",            url: "https://www.leiphone.com/feed"}
+    - {name: "sUAS News",         url: "https://www.suasnews.com/feed/"}
+    - {name: "Unmanned Airspace", url: "https://www.unmannedairspace.info/feed/"}
+    - {name: "The Drone Girl",    url: "https://thedronegirl.com/feed/"}
+    - {name: "Defense News",      url: "https://www.defensenews.com/arc/outboundfeeds/rss/"}
+    - {name: "DroneDJ",           url: "https://dronedj.com/feed"}
+    - {name: "DroneII",           url: "https://www.droneii.com/feed"}
+    - {name: "The War Zone",      url: "https://www.thedrive.com/the-war-zone/rss"}
+    - {name: "AeroTime",          url: "https://www.aerotime.aero/feed"}
+    - {name: "DroneXL",           url: "https://dronexl.co/feed/"}
+    - {name: "dronelife·反无人机",  url: "https://dronelife.com/tag/counter-uas/feed/", ua: "googlebot"}
+    - {name: "MyDefence",         url: "https://www.mydefence.com/feed/"}
+    - {name: "AeroVironment",     url: "https://www.avinc.com/feed/"}
+    - {name: "C4ISRNET",          url: "https://www.c4isrnet.com/arc/outboundfeeds/rss/"}
+    - {name: "UK Defence Journal", url: "https://ukdefencejournal.org.uk/feed/"}
+    - {name: "The Aviationist",   url: "https://theaviationist.com/feed/"}
+    - {name: "Defence Industry Europe", url: "https://defence-industry.eu/feed/"}
+    - {name: "Army Times",        url: "https://www.armytimes.com/arc/outboundfeeds/rss/"}
+    - {name: "Air Force Times",   url: "https://www.airforcetimes.com/arc/outboundfeeds/rss/"}
+    - {name: "UAS Weekly",         url: "https://uasweekly.com/feed/"}
+    - {name: "UAS Vision",         url: "https://www.uasvision.com/feed/"}
+    - {name: "Air & Space Forces", url: "https://www.airandspaceforces.com/feed/"}
+    - {name: "EuroSD",             url: "https://euro-sd.com/feed/"}
+    - {name: "arXiv·信号处理",     url: "https://export.arxiv.org/rss/eess.SP"}
+    - {name: "arXiv·机器人",       url: "https://export.arxiv.org/rss/cs.RO"}
+  # 行业站点直抓（列表页解析）。link_regex 匹配文章链接；标题取 <a> 文本。
+  # 说明：站点结构可能变化，交付后请以实际页面为准调整；面板可增删。
+  # 已实测可用（2026-08）：宇辰网 / 无人系统网首页 / 中国航空报（低空经济+防务）/
+  # 中国民航报无人机频道 / 民航局民航要闻 / 电子发烧友 / 传感器专家网 / 凤凰军事
+  sites:
+    - {name: "宇辰网",       list_url: "https://www.youuav.com/news/list-0-769.html", link_regex: "news/"}
+    - {name: "无人系统网",   list_url: "https://www.youuvs.com/",                      link_regex: "news/detail"}
+    - {name: "中国航空报·低空经济", list_url: "https://www.cannews.com.cn/dikongjingji/index.html", link_regex: "dikongjingji/2026"}
+    - {name: "中国航空报·防务",     list_url: "https://www.cannews.com.cn/fangwu/index.html",        link_regex: "fangwu/2026"}
+    - {name: "中国民航报·无人机",   list_url: "http://www.caacnews.com.cn/1/10/",                    link_regex: "/1/10/20"}
+    - {name: "民航局·民航要闻",     list_url: "http://www.caac.gov.cn/XWZX/MHYW/",                   link_regex: "MHYW/20"}
+    - {name: "电子发烧友",   list_url: "https://www.elecfans.com/news/hangye/",        link_regex: "elecfans.com/d/"}
+    - {name: "传感器专家网", list_url: "https://www.sensorexpert.com.cn/",              link_regex: "/article/"}
+    - {name: "凤凰军事",     list_url: "https://mil.ifeng.com/",                        link_regex: "mil.ifeng.com/c/"}
+  # 微信公众号（需求列为优先来源；原腾讯 WorkBuddy 生态方案不可用后的替代，四条路径可并用）：
+  #  1) sogou（默认开）—— 搜狗微信搜索（weixin.sogou.com）：公众号文章检索核心路径。
+  #      低频使用（每日一次、查询间隔 3s）。若触发验证码，用浏览器打开 weixin.sogou.com
+  #      搜索一次后，把 Cookie 复制到 sogou.cookie（引号括起）可延长免验证周期。
+  #  2) manual_urls —— 人工维护的已知文章 URL 清单（文章页可直接抓正文，最稳）
+  #  3) auto_from_search —— 自动把新闻/Tavily 搜索结果中的 mp.weixin.qq.com 链接抓为公众号文章
+  #  4) api_url —— 对接开源 wechat-download-api（https://github.com/tmwgsicp/wechat-download-api）
+  #                等工具的通用 JSON 接口：GET {api_url}?keyword=<词>&days=2，
+  #                期望返回 JSON 数组（或 {"data": [...]}），每项含 title/url，可选 published/content
+  wechat:
+    sogou:
+      enabled: true
+      keywords_top: 6          # 取关键词清单前 N 个做搜狗检索
+      delay_seconds: 3         # 查询间隔（秒），防触发验证码
+      max_articles: 20         # 本轮公众号文章收录上限
+      cookie: ""               # 可选：浏览器访问 weixin.sogou.com 后复制的 Cookie
+    manual_urls: []
+    auto_from_search: true
+    api_url: ""
+    api_key: ""
+
+# ---------- 运行 ----------
+runtime:
+  send_email: true             # false = 只生成日报与 trace，不发信也不生成 .eml
+  verbose: true
+  timezone: "Asia/Shanghai"
+
+# ---------- 管理面板（部署后自定义邮箱/定时/来源渠道，见 README §面板）----------
+dashboard:
+  enabled: true
+  host: "127.0.0.1"            # 仅本机访问；如需局域网访问改 0.0.0.0（务必设置密码）
+  port: 8787
+  password: ""                 # 建议设置访问密码；留空 = 无鉴权（仅限本机使用）
+
+# ---------- 定时（需求为每天执行，默认每天 08:00；面板或脚本均可修改）----------
+schedule:
+  # cron 表达式（分 时 日 月 周）
+  cron: "0 8 * * *"            # 默认：每天 08:00（可改为工作日 0 8 * * 1-5 或自定义）
+  note: "修改后可用面板「定时」页或运行 ./scheduler_setup.sh 写入 crontab"

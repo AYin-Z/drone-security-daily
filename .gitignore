@@ -1,0 +1,18 @@
+# 密钥与凭据（严禁入库）：config.yaml 含 llm.api_key / smtp 授权码，
+# 仓库只保留 config.example.yaml 模板
+config.yaml
+
+# 运行数据
+data/
+logs/
+*.eml
+
+# 环境与构建产物
+.venv/
+__pycache__/
+*.pyc
+.pack_stage/
+drone-security-daily-delivery-*.tar.gz
+
+# 系统
+.DS_Store
