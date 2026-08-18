@@ -345,6 +345,9 @@ input,select{width:100%;border:1px solid #d8dde6;border-radius:8px;padding:7px 1
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .hint{font-size:12px;color:#8492a6;margin-top:6px}
 .item{display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin:6px 0;font-size:13px}
+details.card summary{cursor:pointer;font-size:15px;color:#1a365d;margin-bottom:10px;list-style:none}
+details.card summary::before{content:'▸ ';color:#1a365d}
+details.card[open] summary::before{content:'▾ '}
 .item .del{color:#dc2626;cursor:pointer;background:none;border:none;font-size:16px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #eef2f7}
@@ -423,35 +426,51 @@ async function render(name){
   }
   if(name==='schedule'){
     const sc=c.schedule;
+    const parts=(sc.cron||'0 8 * * *').trim().split(/\s+/);
+    const curMin=String(parts[0]||'0').padStart(2,'0'), curHour=String(parts[1]||'8').padStart(2,'0'), curDow=parts[4]||'*';
+    const freq=curDow==='1-5'?'weekday':'daily';
+    const hours=Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
+    const mins=Array.from({length:60},(_,i)=>String(i).padStart(2,'0'));
     $('#tab-schedule').innerHTML=`<div class="card"><h3>定时设置</h3>
-      ${field('cron 表达式（分 时 日 月 周）','cron',sc.cron)}
-      <div class="hint">示例：每天 08:00 = <code>0 8 * * *</code>；工作日 08:00 = <code>0 8 * * 1-5</code></div>
-      <button class="btn" onclick="saveSection('schedule')">保存时间</button>
+      <label>执行频率</label>
+      <select id="sc-freq">
+        <option value="daily" ${freq==='daily'?'selected':''}>每天</option>
+        <option value="weekday" ${freq==='weekday'?'selected':''}>工作日（周一 ~ 周五）</option>
+      </select>
+      <div class="row">
+        <div><label>小时（24 小时制）</label><select id="sc-hour">${hours.map(h=>`<option ${h===curHour?'selected':''}>${h}</option>`).join('')}</select></div>
+        <div><label>分钟</label><select id="sc-min">${mins.map(m=>`<option ${m===curMin?'selected':''}>${m}</option>`).join('')}</select></div>
+      </div>
+      <div class="hint">将执行于：<b><span id="sc-preview"></span></b>（自动生成 cron）</div>
+      <button class="btn" onclick="saveSchedule()">保存时间</button>
       <button class="btn ghost" onclick="cronAct('install')">安装到 crontab</button>
       <button class="btn ghost danger" onclick="cronAct('remove')">移除 crontab</button>
       <div class="hint" id="cron-msg"></div></div>`;
+    scPreview();
+    ['sc-hour','sc-min','sc-freq'].forEach(id=>document.getElementById(id).addEventListener('change',scPreview));
   }
+
   if(name==='sources'){
     const s=c.search;
     $('#tab-sources').innerHTML=`
-      <div class="card"><h3>RSS 源（${s.rss_feeds.length}）</h3>
+      <details class="card" open><summary>RSS 源（${s.rss_feeds.length}）</summary>
         <div id="rss-list">${s.rss_feeds.map(f=>`<div class="item"><span>${esc(f.name)} — <a href="${esc(f.url)}" target="_blank">${esc(f.url)}</a></span><button class="del" onclick="rmSource('rss',${JSON.stringify(f).replace(/"/g,'&quot;')})">✕</button></div>`).join('')||'<div class="hint">暂无</div>'}</div>
         <div class="row"><div>${field('名称','', '')}</div><div>${field('RSS URL','','')}</div></div>
-        <button class="btn" onclick="addRss()">添加 RSS 源</button></div>
-      <div class="card"><h3>行业站点直抓（${s.sites.length}）</h3>
+        <button class="btn" onclick="addRss()">添加 RSS 源</button></details>
+      <details class="card"><summary>行业站点直抓（${s.sites.length}）</summary>
         <div id="site-list">${s.sites.map(f=>`<div class="item"><span>${esc(f.name)} — ${esc(f.list_url)} <span class="hint">regex: ${esc(f.link_regex||'')}</span></span><button class="del" onclick="rmSource('site',${JSON.stringify(f).replace(/"/g,'&quot;')})">✕</button></div>`).join('')||'<div class="hint">暂无</div>'}</div>
         <div class="row"><div>${field('站点名','','')}</div><div>${field('列表页 URL','','')}</div><div>${field('链接正则(可选)','','')}</div></div>
-        <button class="btn" onclick="addSite()">添加站点</button></div>
-      <div class="card"><h3>微信公众号（搜狗搜索默认开；下方为辅助路径）</h3>
+        <button class="btn" onclick="addSite()">添加站点</button></details>
+      <details class="card"><summary>微信公众号（搜狗搜索默认开；辅助路径）</summary>
         <label>人工文章 URL 清单（每行一个）</label><textarea id="wx-manual" rows="3" style="width:100%;border:1px solid #d8dde6;border-radius:8px;padding:7px">${esc((s.wechat.manual_urls||[]).join('\\n'))}</textarea>
         <label>wechat-download-api JSON 接口（可选）</label><input id="wx-api" value="${esc(s.wechat.api_url||'')}" style="width:100%">
-        <button class="btn" onclick="saveWechat()">保存公众号配置</button></div>
-      <div class="card"><h3>检索关键词（${s.keywords.length}）</h3>
+        <button class="btn" onclick="saveWechat()">保存公众号配置</button></details>
+      <details class="card" open><summary>检索关键词（${s.keywords.length}）</summary>
         <textarea id="kw" rows="8" style="width:100%;border:1px solid #d8dde6;border-radius:8px;padding:7px">${esc(s.keywords.join('\\n'))}</textarea>
-        <button class="btn" onclick="saveKeywords()">保存关键词</button></div>
-      <div class="card"><h3>新闻搜索引擎</h3>
+        <button class="btn" onclick="saveKeywords()">保存关键词</button></details>
+      <details class="card"><summary>新闻搜索引擎</summary>
         <label>启用（google 为真实 RSS）</label><select id="news-enabled"><option value="true" ${s.news_rss_search.enabled?'selected':''}>启用</option><option value="false" ${!s.news_rss_search.enabled?'selected':''}>禁用</option></select>
-        <button class="btn" onclick="saveNews()">保存新闻搜索设置</button></div>`;
+        <button class="btn" onclick="saveNews()">保存新闻搜索设置</button></details>`;
   }
   if(name==='artifacts'){
     const a=STATE.artifacts;
@@ -468,6 +487,18 @@ async function saveSection(section){
   try{await api('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({section,data})});STATE=await api('/api/state');toast('已保存');render(section)}catch(e){toast(e.message)}
 }
 async function cronAct(action){try{const r=await api('/api/cron',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});$('#cron-msg').textContent=r.msg;STATE=await api('/api/state');toast(r.msg)}catch(e){toast(e.message)}}
+function scPreview(){
+  const h=$('#sc-hour').value, m=$('#sc-min').value, f=$('#sc-freq').value;
+  $('#sc-preview').textContent=`${m} ${h} * * ${f==='weekday'?'1-5':'*'}`;
+}
+async function saveSchedule(){
+  const h=$('#sc-hour').value, m=$('#sc-min').value, f=$('#sc-freq').value;
+  const cron=`${m} ${h} * * ${f==='weekday'?'1-5':'*'}`;
+  try{
+    await api('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({section:'schedule',data:{cron,note:'由面板生成'}})});
+    STATE=await api('/api/state');toast('已保存：每天 '+h+':'+m+(f==='weekday'?'（工作日）':''));
+  }catch(e){toast(e.message)}
+}
 async function rmSource(kind,item){try{await api('/api/sources',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,action:'remove',item})});STATE=await api('/api/state');render('sources');toast('已删除')}catch(e){toast(e.message)}}
 async function addRss(){const t=$('#tab-sources');const inputs=t.querySelectorAll('#tab-sources input');const vals=[...t.querySelectorAll('.card:first-of-type input')].map(i=>i.value.trim());if(!vals[0]||!vals[1])return toast('请填写名称与 URL');await api('/api/sources',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'rss',action:'add',item:{name:vals[0],url:vals[1]}})});STATE=await api('/api/state');render('sources');toast('已添加')}
 async function addSite(){const t=$('#tab-sources');const cards=t.querySelectorAll('.card');const inputs=[...cards[1].querySelectorAll('input')].map(i=>i.value.trim());if(!inputs[0]||!inputs[1])return toast('请填写站点名与 URL');await api('/api/sources',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'site',action:'add',item:{name:inputs[0],list_url:inputs[1],link_regex:inputs[2]||''}})});STATE=await api('/api/state');render('sources');toast('已添加')}
