@@ -184,6 +184,8 @@ class DailyAgent:
         html_path = report_dir / f"drone-security-daily-{day_str}.html"
         html_path.write_text(html, encoding="utf-8")
         result.html_path = str(html_path)
+        # 邮件正文版：追加「邮件客户端不支持脚本」提示条（文件版保持干净）
+        html_email = render_daily(enriched, self.day, generated_at, focus, email_notice=True)
         self.trace.step(stage="render", action="tool_call", tool="render_html",
                         input_summary=f"{len(enriched)} 篇文章",
                         output_summary=f"已生成 {html_path.name}",
@@ -216,7 +218,7 @@ class DailyAgent:
         if send_email:
             smtp = cfg["smtp"]
             subject = f"无人机感知与反制技术日报 {day_str}"
-            body = html
+            body = html_email
             attachments = [("agent-trace-%s.txt" % self.trace.run_id,
                             trace_txt.encode("utf-8"), "text/plain")]
             if smtp.get("attach_trace_html", True):

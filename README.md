@@ -133,6 +133,9 @@ crontab -l | grep drone-security-daily   # 查看已安装的定时任务
   因此默认策略：**正文内嵌完整日报 + 附件仅 trace 文本（.txt）**；如需日报 html 附件，
   先开启 `attach_report_html: true` 发送测试信确认可达。
 - 首次投递前请**先发测试信**（`smtp.to` 填 `yinz7032@qq.com` 验证链路，再确认目标邮箱可达性）。
+- **邮件客户端不支持 JS**：分类筛选按钮在邮件正文里无响应属正常（QQ/Outlook/Gmail 等均剥离脚本）；
+  正文顶部有提示条。完整交互版在 `data/reports/drone-security-daily-*.html`（浏览器打开）；
+  如需直接邮件附件收到交互版，开启 `smtp.attach_report_html: true`（注意 edu 网关可能拦截 .html 附件）。
 - 发件频率固定（每日 1 封）、发件人固定，可显著降低进垃圾箱概率。
 - QQ 邮箱有「防频繁发信」间隔限制；163/QQ 均需在网页端开启 SMTP 并生成**授权码**。
 

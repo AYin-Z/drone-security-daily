@@ -43,12 +43,23 @@ def render_daily(
     now: datetime,
     generated_at: str,
     focus: Optional[dict] = None,
+    email_notice: bool = False,
 ) -> str:
-    """articles: [{title,url,source,published,tags,summary}]；focus: 今日焦点文章（可为 None）。"""
+    """articles: [{title,url,source,published,tags,summary}]；focus: 今日焦点文章（可为 None）。
+    email_notice=True（邮件正文场景）：追加提示条——邮件客户端不支持脚本，分类按钮需浏览器打开 HTML 文件。"""
     n = len(articles)
     cats = sorted({t for a in articles for t in a["tags"]})
     m = len(cats)
     date_line = date_cn(now)
+
+    notice_html = ""
+    if email_notice:
+        notice_html = (
+            '<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;'
+            'padding:10px 16px;font-size:13px;color:#92400E;margin:14px 0;">'
+            '📌 邮件客户端不支持脚本，分类筛选按钮在此处无法使用；'
+            '如需完整交互版（可点击筛选），请打开附件中的 HTML 文件或访问 data/reports/ 目录。</div>'
+        )
 
     focus_html = ""
     if focus:
@@ -141,6 +152,7 @@ def render_daily(
     <div class="sub">{date_line}</div>
     <div class="stats">今日收录 {n} 篇 · 覆盖 {m} 个技术方向</div>
   </div>
+  {notice_html}
   <div class="container">
     <div class="filters">
       <button class="tag-btn active" data-cat="全部">全部</button>
