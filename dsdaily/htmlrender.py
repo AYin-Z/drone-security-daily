@@ -57,6 +57,11 @@ def render_daily(
     filters_html = ""
     empty_html = ""
     script_html = ""
+    focus_html = ""
+    if focus:
+        focus_html = _card_html(focus, focus_flag=True)
+        articles = [a for a in articles if a is not focus]   # 焦点文章不重复出现在列表（必须在渲染前排除）
+
     if email_notice:
         # ---- 邮件版：分类分区 ----
         cards = _sections_html(articles)
@@ -78,11 +83,6 @@ def render_daily(
         )
         empty_html = '<div class="empty" id="empty">当前分类暂无文章</div>'
         script_html = _FILTER_JS
-
-    focus_html = ""
-    if focus:
-        focus_html = _card_html(focus, focus_flag=True)
-        articles = [a for a in articles if a is not focus]   # 焦点文章不重复出现在列表
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
