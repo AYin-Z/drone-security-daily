@@ -104,7 +104,8 @@ crontab -l | grep drone-security-daily   # 查看已安装的定时任务
   - `.html`：可视化版本（深色技术风，阶段/错误筛选、搜索、点击展开原始 JSON；默认随邮件附件，被网关拦截可设 `smtp.attach_trace_html: false`）
   - `.jsonl`：机器可读全量记录
   每条记录含：时间戳、步骤序号、阶段、动作、工具、输入/输出摘要、耗时、token、状态、错误、产物路径
-- **邮件**：正文 = 完整 HTML 日报；附件 = 执行日志 txt。dry-run 时在 `data/emails/` 生成 .eml 草稿
+- **邮件**：正文 = 日报分类分区版（邮件客户端友好）；正文末尾追加以内联样式渲染的 **Agent 执行日志可视化分区**（成功/失败徽章、逐步明细、错误标记）；
+  附件 = 日报 HTML（可交互筛选版）+ 执行日志 txt + 执行日志可视化 HTML。dry-run 时在 `data/emails/` 生成 .eml 草稿
 
 ### 执行日志示例
 

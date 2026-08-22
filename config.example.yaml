@@ -15,7 +15,7 @@ smtp:
   to:
     - "yinz7032@qq.com"        # 收件人（可多个；测试期用此地址，正式改为目标邮箱）
   # 高校反垃圾网关可能拦截 .html 附件：默认「正文内嵌日报」+「trace.txt + trace.html」附件。
-  attach_report_html: false    # 是否把日报 html 也作为附件（先发测试信确认可达再开）
+  attach_report_html: true     # 是否把日报 html 也作为附件（edu 网关若拦截 .html 附件可改 false）
   attach_trace_html: true      # 是否附带 trace 可视化 HTML 附件（被网关拦截时可改 false，txt 仍会附）
   dry_run: true                # true = 不真正发送，生成 .eml 到 data/emails/ 供人工检查；false = 真实发送
 

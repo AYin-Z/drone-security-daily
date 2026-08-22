@@ -404,3 +404,80 @@ def _html_step_row(ev: dict) -> str:
 def _esc(s) -> str:
     return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             .replace('"', "&quot;").replace("'", "&#39;"))
+
+
+def _esc_html(s) -> str:
+    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;"))
+
+
+def _email_row(ev: dict) -> str:
+    """邮件可用的内联样式步骤行（无 class/script，兼容各邮件客户端）。"""
+    no = ev.get("step_no", "?")
+    ts = (ev.get("timestamp") or "")[11:19]
+    stage = ev.get("stage", "?")
+    bg, fg, label = STAGE_COLORS.get(stage, ("#F1F5F9", "#334155", stage))
+    tool = ev.get("tool") or ev.get("action", "")
+    dur = ev.get("duration_ms")
+    dur_s = f" · {dur / 1000:.1f}s" if dur is not None else ""
+    tok = ev.get("tokens")
+    tok_s = f" · tok {tok.get('input', 0) + tok.get('output', 0)}" if tok else ""
+    status = ev.get("status", "ok")
+    err_cls = "border-left:3px solid #dc2626;" if status == "error" else ""
+    border = "border-bottom:1px solid #eef2f7;"
+    in_s = _esc_html(ev.get("input_summary") or "")
+    out_s = _esc_html(ev.get("output_summary") or "")
+    err = _esc_html(str(ev.get("error") or ""))
+    err_html = (f'<div style="color:#991B1B;font-size:12px;margin-top:4px;">⚠️ 错误：{err}</div>'
+                if ev.get("error") else "")
+    return (
+        f'<div style="padding:8px 4px;{border}{err_cls}">'
+        f'<div style="font-size:13px;">'
+        f'<b style="color:#1a365d;">[{no:02d}]</b> <span style="color:#8492a6;font-size:12px;">{_esc_html(ts)}</span> '
+        f'<span style="background:{bg};color:{fg};border-radius:4px;padding:1px 6px;font-size:12px;">{_esc_html(label)}</span> '
+        f'<b style="color:#334155;font-size:13px;">{_esc_html(tool)}</b>'
+        f'<span style="color:#8492a6;font-size:12px;">{dur_s}{tok_s}</span></div>'
+        f'<div style="font-size:12px;color:#475569;margin-top:2px;">{in_s}</div>'
+        f'<div style="font-size:12px;color:#0f766e;margin-top:2px;">→ {out_s}</div>'
+        f'{err_html}</div>'
+    )
+
+
+def render_email_html_from(jsonl_path: Path) -> str:
+    """邮件正文末尾追加的 trace 可视化片段（全部内联样式，无 script/class 依赖）。"""
+    events = TraceLog.read_events(jsonl_path)
+    if not events:
+        return ""
+    first = events[0]
+    run_id = first.get("run_id", "?")
+    done_ev = next((e for e in reversed(events) if e.get("action") == "done"), None)
+    errs = [e for e in events if e.get("status") == "error"]
+    ok = bool(done_ev) and "结果=success" in (done_ev.get("output_summary") or "")
+    total_tok = sum((e.get("tokens") or {}).get("input", 0) + (e.get("tokens") or {}).get("output", 0)
+                    for e in events if e.get("tokens"))
+    total_dur = sum(e.get("duration_ms") or 0 for e in events) / 1000.0
+    badge = ("background:#16a34a;color:#fff;border-radius:10px;padding:2px 10px;font-size:12px;"
+             if ok else "background:#dc2626;color:#fff;border-radius:10px;padding:2px 10px;font-size:12px;")
+    badge_txt = "成功" if ok else "失败"
+    rows = "\n".join(_email_row(ev) for ev in events)
+    return (
+        f'<div style="margin:24px 0 6px;border-top:2px solid #1a365d;padding-top:14px;">'
+        f'<h2 style="color:#1a365d;font-size:17px;margin:0 0 6px;">⚙️ Agent 执行日志（去黑箱化）</h2>'
+        f'<div style="font-size:12px;color:#64748b;margin-bottom:8px;">'
+        f'运行 ID：{_esc_html(run_id)} ｜ 结果：<span style="{badge}">{badge_txt}</span> ｜ '
+        f'步骤 {len(events)} ｜ 耗时 {total_dur:.1f}s ｜ token {total_tok} ｜ 错误 {len(errs)}</div>'
+        f'<div style="border:1px solid #e2e8f0;border-radius:8px;padding:2px 10px;background:#fff;">'
+        f'{rows}</div>'
+        f'<div style="font-size:12px;color:#8492a6;margin-top:6px;">'
+        f'完整 JSONL 与可视化版见附件 agent-trace-*.jsonl / *.html</div></div>'
+    )
+
+
+TraceLog.render_email_html_from = staticmethod(render_email_html_from)
+
+
+def _email_fragment_impl(self) -> str:
+    return render_email_html_from(self.jsonl_path)
+
+
+TraceLog.render_email_html = _email_fragment_impl

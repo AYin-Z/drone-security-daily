@@ -218,13 +218,15 @@ class DailyAgent:
         if send_email:
             smtp = cfg["smtp"]
             subject = f"无人机感知与反制技术日报 {day_str}"
-            body = html_email
+            # 正文 = 日报分区版 + 正文末尾追加 trace 可视化片段（内联样式，邮件客户端兼容）
+            trace_frag = self.trace.render_email_html()
+            body = html_email.replace("</body>", trace_frag + "\n</body>")
             attachments = [("agent-trace-%s.txt" % self.trace.run_id,
                             trace_txt.encode("utf-8"), "text/plain")]
             if smtp.get("attach_trace_html", True):
                 attachments.append(("agent-trace-%s.html" % self.trace.run_id,
                                     trace_html.encode("utf-8"), "text/html"))
-            if smtp.get("attach_report_html"):
+            if smtp.get("attach_report_html", True):
                 attachments.append((f"drone-security-daily-{day_str}.html",
                                     html.encode("utf-8"), "text/html"))
             dry = smtp.get("dry_run", True) if dry_run_mail is None else dry_run_mail
